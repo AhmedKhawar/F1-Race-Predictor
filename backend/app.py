@@ -3,21 +3,18 @@ import pickle
 import os
 import pandas as pd
 
-
 app = Flask(__name__)
 
-MODEL_PATH = os.path.join(
-    os.path.dirname(__file__),
-    "../ml/model.pkl"
-)
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
-with open(MODEL_PATH, "rb") as file:
-    model = pickle.load(file)
+MODEL_PATH = os.path.join(BASE_DIR, "ml", "model.pkl")
 
+with open(MODEL_PATH, "rb") as f:
+    model = pickle.load(f)
 
-drivers = pd.read_csv("../dataset/raw/drivers.csv")
-constructors = pd.read_csv("../dataset/raw/constructors.csv")
-circuits = pd.read_csv("../dataset/raw/circuits.csv")
+drivers = pd.read_csv(os.path.join(BASE_DIR, "dataset", "raw", "drivers.csv"))
+constructors = pd.read_csv(os.path.join(BASE_DIR, "dataset", "raw", "constructors.csv"))
+circuits = pd.read_csv(os.path.join(BASE_DIR, "dataset", "raw", "circuits.csv"))
 
 
 @app.route("/")
@@ -27,12 +24,9 @@ def home():
     }
 
 
-
 @app.route("/drivers", methods=["GET"])
 def get_drivers():
-
     data = drivers[["driverId", "forename", "surname"]].copy()
-
     data["name"] = data["forename"] + " " + data["surname"]
 
     result = data[["driverId", "name"]].to_dict(orient="records")
@@ -42,7 +36,6 @@ def get_drivers():
 
 @app.route("/constructors", methods=["GET"])
 def get_constructors():
-
     result = constructors[
         ["constructorId", "name"]
     ].to_dict(orient="records")
@@ -52,7 +45,6 @@ def get_constructors():
 
 @app.route("/circuits", methods=["GET"])
 def get_circuits():
-
     result = circuits[
         ["circuitId", "name"]
     ].to_dict(orient="records")
@@ -60,11 +52,22 @@ def get_circuits():
     return jsonify(result)
 
 
-
 @app.route("/predict", methods=["POST"])
 def predict():
-
     data = request.json
+
+    required = [
+        "driverId",
+        "constructorId",
+        "circuitId",
+        "qualifyingPosition"
+    ]
+
+    for field in required:
+        if field not in data:
+            return jsonify({
+                "error": f"{field} is required"
+            }), 400
 
     features = [[
         int(data["driverId"]),
@@ -79,5 +82,7 @@ def predict():
         "predicted_position": round(float(prediction[0]))
     })
 
+
 if __name__ == "__main__":
-    app.run()
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
