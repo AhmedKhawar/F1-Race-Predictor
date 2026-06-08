@@ -2,9 +2,10 @@ from flask import Flask, request, jsonify
 import pickle
 import os
 import pandas as pd
+from flask_cors import CORS
 
 app = Flask(__name__)
-
+CORS(app, origins=["https://f1-race-predictor-52a4d.web.app"])
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
 MODEL_PATH = os.path.join(BASE_DIR, "ml", "model.pkl")
