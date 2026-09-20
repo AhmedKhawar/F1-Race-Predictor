@@ -1,221 +1,218 @@
-# F1 Race Predictor Backend Documentation
+# 🏎️ F1 Race Predictor
 
-## Overview
+Predict where a Formula 1 driver will finish a race, based on where they qualified.
 
-This project predicts the expected finishing position of a Formula 1 driver using historical race data and a trained Random Forest machine learning model.
-
-The backend is built using Flask and exposes REST APIs that can be consumed by a Flutter frontend.
+Give the model a **driver**, a **constructor**, a **circuit** and a **qualifying position**, and it returns a **predicted finishing position**. This repository contains the full backend: the training pipeline, the trained model and the Flask REST API that serves predictions to a Flutter app.
 
 ---
 
-# Architecture
+## Table of Contents
 
-Dataset (CSV Files)
-↓
-Data Preprocessing
-↓
-Random Forest Training
-↓
-model.pkl
-↓
-Flask API
-↓
-Flutter Frontend
+- [How It Works](#how-it-works)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Getting Started](#getting-started)
+- [API Reference](#api-reference)
+- [Flutter Integration](#flutter-integration)
+- [Model Details](#model-details)
+- [Limitations](#limitations)
 
 ---
 
-# Project Structure
+## How It Works
 
+```
+Ergast CSV data  →  Preprocessing  →  Random Forest training  →  model.pkl  →  Flask API  →  Flutter app
+```
+
+1. Historical race data (results, qualifying, drivers, constructors, circuits, races) is loaded from CSV files.
+2. The data is preprocessed into one training row per driver per race.
+3. A Random Forest model is trained and saved as `model.pkl`.
+4. The Flask API loads the model and exposes endpoints for lookups and predictions.
+5. The Flutter frontend lets users pick their inputs and displays the predicted result.
+
+---
+
+## Tech Stack
+
+| Layer       | Technology                              |
+| ----------- | --------------------------------------- |
+| Language    | Python                                  |
+| Backend     | Flask (REST API)                        |
+| ML model    | Random Forest, serialized to `model.pkl` |
+| Data        | Ergast historical F1 dataset (CSV)      |
+| Frontend    | Flutter (consumes this API)             |
+
+---
+
+## Project Structure
+
+```
 F1-Race-Predictor/
-
-backend/
-
-* app.py
-* requirements.txt
-* test_api.py
-
-dataset/raw/
-
-* circuits.csv
-* constructors.csv
-* drivers.csv
-* qualifying.csv
-* races.csv
-* results.csv
-
-ml/
-
-* train_model.py
-* model.pkl
+├── backend/
+│   ├── app.py              # Flask API
+│   ├── requirements.txt    # Python dependencies
+│   └── test_api.py         # API tests
+├── dataset/
+│   └── raw/
+│       ├── circuits.csv
+│       ├── constructors.csv
+│       ├── drivers.csv
+│       ├── qualifying.csv
+│       ├── races.csv
+│       └── results.csv
+├── ml/
+│   ├── train_model.py      # Model training script
+│   └── model.pkl           # Trained model (generated)
+└── README.md
+```
 
 ---
 
-# Installation
+## Getting Started
 
-Install dependencies:
+### 1. Install dependencies
 
+From the project root:
+
+```bash
 pip install -r backend/requirements.txt
+```
 
----
+### 2. Train the model
 
-# Train Model
-
-From project root:
-
+```bash
 cd ml
-
 python train_model.py
+```
 
-This generates:
+This generates `model.pkl`.
 
-model.pkl
+### 3. Run the backend
 
----
-
-# Run Backend
-
-From project root:
-
+```bash
 cd backend
-
 python app.py
+```
 
-Server starts at:
-
-http://127.0.0.1:5000
+The server starts at **http://127.0.0.1:5000**.
 
 ---
 
-# Available APIs
+## API Reference
 
-## GET /drivers
+Base URL: `http://127.0.0.1:5000`
+
+### `GET /drivers`
 
 Returns all drivers.
 
-Example Response:
-
+```json
 [
-{
-"driverId": 1,
-"name": "Lewis Hamilton"
-}
+  { "driverId": 1, "name": "Lewis Hamilton" }
 ]
+```
 
----
-
-## GET /constructors
+### `GET /constructors`
 
 Returns all constructors.
 
-Example Response:
-
+```json
 [
-{
-"constructorId": 131,
-"name": "Mercedes"
-}
+  { "constructorId": 131, "name": "Mercedes" }
 ]
+```
 
----
-
-## GET /circuits
+### `GET /circuits`
 
 Returns all circuits.
 
-Example Response:
-
+```json
 [
-{
-"circuitId": 1,
-"name": "Albert Park Grand Prix Circuit"
-}
+  { "circuitId": 1, "name": "Albert Park Grand Prix Circuit" }
 ]
+```
 
----
+### `POST /predict`
 
-## POST /predict
+Predicts the finishing position for the given inputs.
 
-Predicts finishing position.
+**Request body**
 
-Request:
+| Field                | Type | Description                        |
+| -------------------- | ---- | ---------------------------------- |
+| `driverId`           | int  | ID from `GET /drivers`             |
+| `constructorId`      | int  | ID from `GET /constructors`        |
+| `circuitId`          | int  | ID from `GET /circuits`            |
+| `qualifyingPosition` | int  | Grid position the driver qualified in |
 
+```json
 {
-"driverId": 1,
-"constructorId": 131,
-"circuitId": 1,
-"qualifyingPosition": 2
+  "driverId": 1,
+  "constructorId": 131,
+  "circuitId": 1,
+  "qualifyingPosition": 2
 }
+```
 
-Response:
+**Response**
 
+```json
 {
-"predicted_position": 3
+  "predicted_position": 3
 }
+```
+
+**Example with curl**
+
+```bash
+curl -X POST http://127.0.0.1:5000/predict \
+  -H "Content-Type: application/json" \
+  -d '{"driverId": 1, "constructorId": 131, "circuitId": 1, "qualifyingPosition": 2}'
+```
 
 ---
 
-# Flutter Integration Flow
+## Flutter Integration
 
-1. Load drivers from:
+The app follows a simple flow:
 
-GET /drivers
+1. On launch, load dropdown options from `GET /drivers`, `GET /constructors` and `GET /circuits`.
+2. The user selects a driver, constructor and circuit, and enters a qualifying position.
+3. The app sends the selections to `POST /predict`.
+4. The backend returns `predicted_position`, which the app shows on the result screen.
 
-2. Load constructors from:
-
-GET /constructors
-
-3. Load circuits from:
-
-GET /circuits
-
-4. User selects:
-
-* Driver
-* Constructor
-* Circuit
-* Qualifying Position
-
-5. Flutter sends:
-
-POST /predict
-
-6. Backend returns:
-
-predicted_position
-
-7. Display result on Result Screen.
+**Home screen:** driver, constructor and circuit dropdowns, a qualifying position input and a Predict button.
+**Result screen:** the predicted finishing position (for example, **P3**).
 
 ---
 
-# Expected Flutter Screens
+## Model Details
 
-Home Screen
-
-* Driver Dropdown
-* Constructor Dropdown
-* Circuit Dropdown
-* Qualifying Position Input
-* Predict Button
-
-Result Screen
-
-Predicted Finish Position
-
-P3
+- **Algorithm:** Random Forest
+- **Training data:** historical Formula 1 data from the Ergast dataset
+- **Features:** driver ID, constructor ID, circuit ID, qualifying position
+- **Target:** final race finishing position
 
 ---
 
-# Notes
+## Limitations
 
-The machine learning model is trained using historical Formula 1 data from the Ergast dataset.
+- The model uses only four inputs. It does not account for weather, tyre strategy, safety cars, penalties, mechanical failures or recent form.
+- Driver, constructor and circuit are fed in as IDs, so the model can only work with entities that appear in the training data.
+- Output is a single predicted position, with no confidence score or probability distribution.
 
-Current prediction features:
+---
 
-* Driver ID
-* Constructor ID
-* Circuit ID
-* Qualifying Position
+## Future Improvements
 
-Target:
+- Add form-based features such as recent results and team performance trends
+- Report model accuracy metrics (for example, mean absolute error of predicted vs. actual position)
+- Return prediction confidence alongside the position
+- Add input validation and clearer error responses to `/predict`
 
-* Final Race Finishing Position
+---
+
+## Data Source
+
+Historical race data comes from the Ergast Formula 1 dataset.
