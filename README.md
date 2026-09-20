@@ -4,10 +4,13 @@ Predict where a Formula 1 driver will finish a race, based on where they qualifi
 
 Give the model a **driver**, a **constructor**, a **circuit** and a **qualifying position**, and it returns a **predicted finishing position**. This repository contains the full backend: the training pipeline, the trained model and the Flask REST API that serves predictions to a Flutter app.
 
+⚙️ **Live API:** [f1-race-predictor-l291.onrender.com](https://f1-race-predictor-l291.onrender.com/) (free to use, no API key needed)
+
 ---
 
 ## Table of Contents
 
+- [Live API](#live-api)
 - [How It Works](#how-it-works)
 - [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
@@ -16,6 +19,85 @@ Give the model a **driver**, a **constructor**, a **circuit** and a **qualifying
 - [Flutter Integration](#flutter-integration)
 - [Model Details](#model-details)
 - [Limitations](#limitations)
+
+---
+
+## Live API
+
+The backend is hosted, so you can call it directly from your own app, script or terminal without running anything locally.
+
+**Base URL**
+
+```
+https://f1-race-predictor-l291.onrender.com
+```
+
+**Check that it's running**
+
+```bash
+curl https://f1-race-predictor-l291.onrender.com/
+```
+
+```json
+{ "message": "F1 Race Predictor API Running" }
+```
+
+> If the service has been idle, the first request may take a few seconds while it wakes up. Later requests are fast.
+
+### Try it in three steps
+
+**1. Find the IDs you need.** Predictions use IDs, not names, so look them up first:
+
+```bash
+curl https://f1-race-predictor-l291.onrender.com/drivers
+curl https://f1-race-predictor-l291.onrender.com/constructors
+curl https://f1-race-predictor-l291.onrender.com/circuits
+```
+
+**2. Request a prediction.**
+
+```bash
+curl -X POST https://f1-race-predictor-l291.onrender.com/predict \
+  -H "Content-Type: application/json" \
+  -d '{"driverId": 1, "constructorId": 131, "circuitId": 1, "qualifyingPosition": 2}'
+```
+
+**3. Read the result.**
+
+```json
+{ "predicted_position": 3 }
+```
+
+### Use it from code
+
+**JavaScript**
+
+```javascript
+const res = await fetch("https://f1-race-predictor-l291.onrender.com/predict", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    driverId: 1,
+    constructorId: 131,
+    circuitId: 1,
+    qualifyingPosition: 2,
+  }),
+});
+const data = await res.json();
+console.log(data.predicted_position);
+```
+
+**Python**
+
+```python
+import requests
+
+res = requests.post(
+    "https://f1-race-predictor-l291.onrender.com/predict",
+    json={"driverId": 1, "constructorId": 131, "circuitId": 1, "qualifyingPosition": 2},
+)
+print(res.json()["predicted_position"])
+```
 
 ---
 
@@ -42,6 +124,7 @@ Ergast CSV data  →  Preprocessing  →  Random Forest training  →  model.pkl
 | ML model    | Random Forest, serialized to `model.pkl` |
 | Data        | Ergast historical F1 dataset (CSV)      |
 | Frontend    | Flutter (consumes this API)             |
+| Hosting     | Render                                  |
 
 ---
 
@@ -70,6 +153,8 @@ F1-Race-Predictor/
 ---
 
 ## Getting Started
+
+Want to run it yourself instead of using the hosted API?
 
 ### 1. Install dependencies
 
@@ -101,7 +186,20 @@ The server starts at **http://127.0.0.1:5000**.
 
 ## API Reference
 
-Base URL: `http://127.0.0.1:5000`
+| Environment | Base URL                                        |
+| ----------- | ----------------------------------------------- |
+| Live        | `https://f1-race-predictor-l291.onrender.com`   |
+| Local       | `http://127.0.0.1:5000`                         |
+
+The examples below use the local URL. Swap in the live one to call the hosted API.
+
+### `GET /`
+
+Health check. Returns a message confirming the API is running.
+
+```json
+{ "message": "F1 Race Predictor API Running" }
+```
 
 ### `GET /drivers`
 
